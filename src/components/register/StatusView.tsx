@@ -22,7 +22,7 @@ export function StatusView() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!id.trim() || !isPhone(phone)) return setError(t("Enter the reference number and mobile number."));
+    if (!id.trim() || !isPhone(phone)) return setError(t("Enter the reference or UTR number and the mobile number."));
     setBusy(true);
     setError("");
     setResult(null);
@@ -43,7 +43,7 @@ export function StatusView() {
           <div className="mx-auto max-w-3xl space-y-6">
             <form noValidate onSubmit={submit} className="card space-y-4 p-6">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label={t("Reference number *")}><input className="input uppercase" placeholder="REG-XXXXXXXX" value={id} onChange={(e) => setId(e.target.value)} /></Field>
+                <Field label={t("Reference number or UTR number *")} hint={t("Use the REG number, or the 12-digit UTR of your payment.")}><input className="input uppercase" placeholder="REG-XXXXXXXX" value={id} onChange={(e) => setId(e.target.value)} /></Field>
                 <Field label={t("Mobile number *")} hint={t("For a team, use the leader's number.")}><input className="input" type="tel" inputMode="numeric" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))} /></Field>
               </div>
               {error && <p role="alert" className="text-sm font-medium text-accent">{error}</p>}
