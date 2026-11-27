@@ -1,6 +1,7 @@
 "use client";
 
 import { useT } from "@/lib/i18n";
+import { loadSite, useLoadError } from "@/lib/store";
 import Link from "next/link";
 import type { Competition } from "@/lib/types";
 import { competitionPath, money } from "@/lib/utils";
@@ -51,6 +52,15 @@ export function CompetitionGrid({ items }: { items: Competition[] }) {
 
 export function NotAvailable({ ready }: { ready: boolean }) {
   const t = useT();
+  const error = useLoadError();
+  if (!ready && error) {
+    return (
+      <div className="container-page py-24 text-center">
+        <p role="alert" className="mb-6 text-zinc-700">{t(error)}</p>
+        <button type="button" className="btn-green" onClick={() => void loadSite()}>{t("Try again")}</button>
+      </div>
+    );
+  }
   if (!ready) return <p className="container-page py-24 text-center text-zinc-500">{t("Loading…")}</p>;
   return (
     <div className="container-page py-24 text-center">

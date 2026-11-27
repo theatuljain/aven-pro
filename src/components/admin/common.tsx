@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { updateData, useData } from "@/lib/store";
-import type { SiteData } from "@/lib/types";
+import { updateSite, useData } from "@/lib/store";
+import type { SiteDocument } from "@/lib/types";
 import { Picture } from "../Media";
 
 export function Title({ children, text }: { children: React.ReactNode; text?: string }) {
@@ -17,12 +17,13 @@ export function Title({ children, text }: { children: React.ReactNode; text?: st
 /** Saves a change and reports the result to the admin. */
 export function useSave() {
   const [message, setMessage] = useState("");
-  const save = (change: (d: SiteData) => SiteData) => {
-    const ok = updateData(change);
-    setMessage(ok ? "✓ Saved" : "Could not save. Browser storage may be full or blocked.");
-    return ok;
+  const save = async (change: (d: SiteDocument) => SiteDocument) => {
+    setMessage("Saving…");
+    const error = await updateSite(change);
+    setMessage(error || "✓ Saved");
+    return !error;
   };
-  const status = message && <span role="status" className="text-sm font-medium text-brand">{message}</span>;
+  const status = message && <span role="status" className={`text-sm font-medium ${/^(✓|Saving)/.test(message) ? "text-brand" : "text-accent"}`}>{message}</span>;
   return { save, status, clear: () => setMessage("") };
 }
 

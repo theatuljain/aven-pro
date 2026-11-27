@@ -1,10 +1,11 @@
 "use client";
 
 import { useT } from "@/lib/i18n";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLayoutEffect, useState } from "react";
 import { useData, useReady } from "@/lib/store";
-import type { Registration, RegistrationType } from "@/lib/types";
+import type { PublicRegistration, RegistrationType } from "@/lib/types";
 import { competitionPath } from "@/lib/utils";
 import { NotAvailable, PageHeader } from "../Cards";
 import { PaymentPanel } from "./PaymentPanel";
@@ -21,7 +22,7 @@ export function RegisterView({ slug }: { slug: string }) {
   const ready = useReady();
   const router = useRouter();
   const [type, setType] = useState<RegistrationType | null>(null);
-  const [done, setDone] = useState<Registration | null>(null);
+  const [done, setDone] = useState<{ registration: PublicRegistration; phone: string } | null>(null);
   // Next.js keeps hidden pages alive, so start fresh on the next visit.
   useLayoutEffect(() => () => { setType(null); setDone(null); }, []);
   const c = competitions.find((x) => x.slug === slug);
@@ -36,7 +37,7 @@ export function RegisterView({ slug }: { slug: string }) {
       <div className="container-page py-10">
         <div className="mx-auto max-w-3xl">
           {done ? (
-            <PaymentPanel registration={done} />
+            <PaymentPanel registration={done.registration} phone={done.phone} />
           ) : (
             <>
               <div className="card mb-6 p-5">
@@ -58,7 +59,8 @@ export function RegisterView({ slug }: { slug: string }) {
                   </button>
                 ))}
               </div>
-              {selected && <RegistrationForm key={selected} type={selected} competition={c} onDone={setDone} />}
+              {selected && <RegistrationForm key={selected} type={selected} competition={c} onDone={(registration, phone) => setDone({ registration, phone })} />}
+              <p className="mt-6 text-center text-sm"><Link href="/status" className="font-semibold text-accent underline">{t("Already registered? Check your status")}</Link></p>
             </>
           )}
         </div>

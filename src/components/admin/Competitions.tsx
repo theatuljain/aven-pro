@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useState } from "react";
 import { AGE_CATEGORIES, GROUPS, newCompetition } from "@/lib/seed";
-import { updateData, useData } from "@/lib/store";
+import { updateSite, useData } from "@/lib/store";
 import type { Competition, CompetitionType, GroupId } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 import { Field } from "../Field";
@@ -28,7 +28,7 @@ function Editor({ initial, onClose }: { initial: Competition; onClose: () => voi
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={c[key]} onChange={(e) => set({ [key]: e.target.checked })} />{label}</label>
   );
 
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!c.name.trim()) return setError("Enter a name.");
     if (!(c.prize >= 0)) return setError("Prize cannot be negative.");
@@ -39,7 +39,7 @@ function Editor({ initial, onClose }: { initial: Competition; onClose: () => voi
     let slug = c.slug || slugify(c.name);
     if (!slug) return setError("The name must contain English letters or numbers.");
     const clean = (list: string[]) => list.map((x) => x.trim()).filter(Boolean);
-    const ok = save((d) => {
+    const ok = await save((d) => {
       // A new competition must not overwrite another with the same name.
       if (!c.slug && d.competitions.some((x) => x.slug === slug)) slug = `${slug}-${Date.now().toString(36)}`;
       // Prices are managed on the Pricing page, so keep their latest values.
@@ -115,9 +115,10 @@ export function CompetitionManager({ type }: { type: CompetitionType }) {
   useLayoutEffect(() => () => setEditing(null), []);
   const items = competitions.filter((c) => c.type === type);
   const open = (item: Competition) => { setEditing({ item, key: Date.now() }); window.scrollTo({ top: 0 }); };
-  const toggle = (slug: string) => {
+  const toggle = async (slug: string, enabled: boolean) => {
     setEditing(null); // an open editor would otherwise save the old visibility
-    updateData((d) => ({ ...d, competitions: d.competitions.map((c) => (c.slug === slug ? { ...c, enabled: !c.enabled } : c)) }));
+    const error = await updateSite((d) => ({ ...d, competitions: d.competitions.map((c) => (c.slug === slug ? { ...c, enabled } : c)) }));
+    if (error) window.alert(error);
   };
   const sections = type === "activity"
     ? GROUPS.map((g) => ({ title: g.name, list: items.filter((c) => c.group === g.id) }))
@@ -139,7 +140,7 @@ export function CompetitionManager({ type }: { type: CompetitionType }) {
                 <span aria-hidden className="text-2xl">{c.icon}</span>
                 <span className="flex-1 font-medium">{c.name}</span>
                 <span className={`text-xs font-semibold ${c.enabled ? "text-brand" : "text-zinc-400"}`}>{c.enabled ? "● Visible" : "○ Hidden"}</span>
-                <button type="button" className="btn-outline" onClick={() => toggle(c.slug)}>{c.enabled ? "Hide" : "Show"}</button>
+                <button type="button" className="btn-outline" onClick={() => toggle(c.slug, !c.enabled)}>{c.enabled ? "Hide" : "Show"}</button>
                 <button type="button" className="btn-green" onClick={() => open(c)}>Edit</button>
               </li>
             ))}

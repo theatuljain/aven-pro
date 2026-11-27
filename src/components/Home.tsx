@@ -57,7 +57,7 @@ function Steps() {
     ["Choose your event", "Browse sports and talent competitions."],
     ["Read the rules", "Check the prize, age group, team size and fee."],
     ["Register", "Enter as an individual or bring your whole team."],
-    ["Pay the fee", "Pay online. Payments are in test mode for now."],
+    ["Pay the fee", "Pay by UPI and submit your UTR number and screenshot."],
   ];
   return (
     <section className="stadium py-20 text-white">

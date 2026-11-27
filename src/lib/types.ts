@@ -29,6 +29,38 @@ export interface Competition {
 export interface TeamMember {
   name: string;
   age: string;
+  phone: string;
+}
+
+/** What the registration form sends. The server decides price, id and status. */
+export interface RegistrationInput {
+  type: RegistrationType;
+  competitionSlug: string;
+  participantName: string;
+  phone: string;
+  email: string;
+  city: string;
+  teamName: string;
+  members: TeamMember[];
+  ageCategory: string;
+  guardianName: string;
+  guardianPhone: string;
+  consent: boolean;
+}
+
+/** Pending: not paid yet. Submitted: waiting for the admin to check. */
+export type PaymentStatus = "Pending" | "Submitted" | "Approved" | "Rejected";
+
+/** The part of a registration that its owner can see. */
+export interface PublicRegistration {
+  id: string;
+  type: RegistrationType;
+  competitionName: string;
+  memberCount: number;
+  amount: number;
+  paymentStatus: PaymentStatus;
+  utr?: string;
+  rejectReason?: string;
 }
 
 export interface Registration {
@@ -46,8 +78,12 @@ export interface Registration {
   guardianName: string;
   guardianPhone: string;
   amount: number;
-  paymentStatus: "Pending" | "Test payment verified";
-  paymentId?: string;
+  paymentStatus: PaymentStatus;
+  utr?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+  rejectReason?: string;
+  rejectedUtr?: string;
   createdAt: string;
 }
 
@@ -81,12 +117,18 @@ export interface SiteContent {
   team: TeamPerson[];
   contact: { address: string; phone: string; email: string; hours: string };
   social: { instagram: string; facebook: string; youtube: string };
-  payment: { upiEnabled: boolean; razorpayEnabled: boolean; qrImage: string };
+  payment: { upiId: string; payeeName: string };
+}
+
+/** Stored in the database. The version stops one save from overwriting another. */
+export interface SiteDocument {
+  version: number;
+  competitions: Competition[];
+  content: SiteContent;
 }
 
 export interface SiteData {
   competitions: Competition[];
-  registrations: Registration[];
   media: MediaItem[];
   content: SiteContent;
 }

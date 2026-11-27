@@ -2,25 +2,23 @@
 
 import { useState } from "react";
 import { LIMITS, deleteFile, saveFile } from "@/lib/media";
-import { updateData, useData } from "@/lib/store";
-import type { MediaItem, SiteData } from "@/lib/types";
+import { updateMedia, updateSite, useData } from "@/lib/store";
+import type { MediaItem, SiteDocument } from "@/lib/types";
 import { Picture, Video } from "../Media";
 import { Title } from "./common";
 
 /** Removes a deleted file from every place that was using it. */
-function removeMedia(d: SiteData, id: string): SiteData {
+function removeMedia(d: SiteDocument, id: string): SiteDocument {
   const drop = (value: string) => (value === id ? "" : value);
   const { content } = d;
   return {
     ...d,
-    media: d.media.filter((m) => m.id !== id),
     competitions: d.competitions.map((c) => ({ ...c, image: drop(c.image) })),
     content: {
       ...content,
       hero: { ...content.hero, image: drop(content.hero.image) },
       about: { ...content.about, image: drop(content.about.image), video: drop(content.about.video ?? "") },
       team: content.team.map((p) => ({ ...p, image: drop(p.image) })),
-      payment: { ...content.payment, qrImage: drop(content.payment.qrImage) },
     },
   };
 }
@@ -43,7 +41,7 @@ export function MediaManager() {
       const item: MediaItem = { id: crypto.randomUUID(), name: file.name, kind, inGallery: true };
       try {
         await saveFile(item.id, file);
-        if (!updateData((d) => ({ ...d, media: [item, ...d.media] }))) throw new Error("save failed");
+        if (!updateMedia((items) => [item, ...items])) throw new Error("save failed");
         log.push(`${file.name}: uploaded.`);
       } catch {
         log.push(`${file.name}: could not be saved.`);
@@ -56,16 +54,19 @@ export function MediaManager() {
 
   async function remove(item: MediaItem) {
     if (!window.confirm(`Delete "${item.name}"?`)) return;
-    if (updateData((d) => removeMedia(d, item.id))) await deleteFile(item.id).catch(() => {});
+    const error = await updateSite((d) => removeMedia(d, item.id));
+    if (error) return window.alert(error);
+    if (updateMedia((items) => items.filter((m) => m.id !== item.id))) await deleteFile(item.id).catch(() => {});
   }
 
   const setGallery = (id: string, inGallery: boolean) =>
-    updateData((d) => ({ ...d, media: d.media.map((m) => (m.id === id ? { ...m, inGallery } : m)) }));
+    updateMedia((items) => items.map((m) => (m.id === id ? { ...m, inGallery } : m)));
 
   const shown = media.filter((m) => !filter || m.kind === filter);
   return (
     <>
       <Title text="Upload photos and videos, and choose what shows in the gallery">Media & Gallery</Title>
+      <p className="mb-4 rounded-lg bg-amber-100 p-3 text-sm text-amber-900">Photos and videos are still saved only on this device, so visitors cannot see them yet. Online file storage is the next step.</p>
       <div className="card mb-6 border-2 border-dashed p-6">
         <label className="block font-semibold" htmlFor="upload">Upload files</label>
         <p className="mb-3 text-sm text-zinc-600">Images: JPG, PNG, WebP up to {LIMITS.image.maxMb} MB. Videos: MP4, WebM up to {LIMITS.video.maxMb} MB. New files show in the gallery; untick to hide.</p>

@@ -14,9 +14,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </Suspense>
       </aside>
       <div className="min-w-0 flex-1">
-        <p className="bg-amber-100 px-5 py-2 text-xs font-medium text-amber-900">
-          Prototype: no login yet, and data is saved only in this browser. Do not enter real participant details.
-        </p>
         <main className="p-5 lg:p-8"><AdminGate>{children}</AdminGate></main>
       </div>
     </div>

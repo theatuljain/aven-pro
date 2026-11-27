@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useReady } from "@/lib/store";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { ApiError, api, loadSite, useLoadError, useReady } from "@/lib/store";
+import type { Registration } from "@/lib/types";
 
 const LINKS = [
   ["/admin", "📊 Dashboard"],
@@ -28,7 +30,96 @@ export function AdminNav() {
   );
 }
 
-/** Admin forms start from saved data, so wait until it is loaded. */
+interface RegistrationList {
+  registrations: Registration[];
+  loaded: boolean;
+  error: string;
+  refresh: () => void;
+}
+
+const RegistrationsContext = createContext<RegistrationList>({ registrations: [], loaded: false, error: "", refresh: () => {} });
+export const useRegistrations = () => useContext(RegistrationsContext);
+
+function Login({ onSignedIn }: { onSignedIn: () => void }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await api("/api/admin/session", "POST", { password });
+      onSignedIn();
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
+  return (
+    <form onSubmit={submit} className="card mx-auto mt-10 max-w-sm space-y-4 p-6">
+      <h1 className="font-display text-3xl font-bold text-brand">Admin sign in</h1>
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium">Password</span>
+        <input type="password" required autoFocus autoComplete="current-password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
+      </label>
+      {error && <p role="alert" className="text-sm font-medium text-accent">{error}</p>}
+      <button type="submit" disabled={busy} className="btn-primary w-full">{busy ? "Signing in…" : "Sign in"}</button>
+    </form>
+  );
+}
+
+/** Shows the admin pages only after sign in. The APIs check the sign in again. */
 export function AdminGate({ children }: { children: React.ReactNode }) {
-  return useReady() ? <>{children}</> : <p className="text-zinc-500">Loading…</p>;
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [list, setList] = useState<Registration[] | null>(null);
+  const [error, setError] = useState("");
+  const ready = useReady();
+  const siteError = useLoadError();
+
+  const refresh = useCallback(() => {
+    api<Registration[]>("/api/admin/registrations")
+      .then((result) => {
+        setList(result);
+        setError("");
+      })
+      .catch((e: Error) => {
+        if (e instanceof ApiError && e.status === 401) setSignedIn(false);
+        else setError(e.message);
+      });
+  }, []);
+
+  const check = useCallback(() => {
+    api<{ signedIn: boolean }>("/api/admin/session")
+      .then((result) => setSignedIn(result.signedIn))
+      .catch((e: Error) => setError(e.message));
+  }, []);
+
+  useEffect(check, [check]);
+  useEffect(() => {
+    if (!signedIn) return;
+    void loadSite();
+    refresh();
+    // New registrations appear without reloading the page.
+    const timer = window.setInterval(refresh, 30_000);
+    return () => window.clearInterval(timer);
+  }, [signedIn, refresh]);
+
+  if (signedIn === false) return <Login onSignedIn={() => setSignedIn(true)} />;
+  if (!signedIn || !ready) return <p role="status" className="text-zinc-500">{(!signedIn && error) || siteError || "Loading…"}</p>;
+
+  async function signOut() {
+    await api("/api/admin/session", "DELETE").catch(() => {});
+    setList(null);
+    setSignedIn(false);
+  }
+
+  return (
+    <RegistrationsContext value={{ registrations: list ?? [], loaded: !!list, error, refresh }}>
+      <div className="mb-4 flex justify-end">
+        <button type="button" className="btn-outline" onClick={signOut}>Sign out</button>
+      </div>
+      {children}
+    </RegistrationsContext>
+  );
 }

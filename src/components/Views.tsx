@@ -85,7 +85,7 @@ export function DetailView({ type, slug, groupId }: { type: CompetitionType; slu
   const { competitions } = useData();
   const ready = useReady();
   const c = competitions.find((x) => x.slug === slug && x.type === type && (!groupId || x.group === groupId));
-  if (!c || !c.enabled) return <NotAvailable ready={ready} />;
+  if (!ready || !c || !c.enabled) return <NotAvailable ready={ready} />;
   const group = GROUPS.find((g) => g.id === c.group);
   const crumbs = type === "activity" && group
     ? [{ href: "/activities", label: "Activities" }, { href: `/activities/${group.id}`, label: group.name }]

@@ -1,15 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { resetData, useData } from "@/lib/store";
+import { useData } from "@/lib/store";
 import { Title } from "./common";
 import { RegistrationTable } from "./Registrations";
+import { useRegistrations } from "./Shell";
 
 export function Dashboard() {
-  const { registrations, competitions } = useData();
+  const { competitions } = useData();
+  const { registrations, loaded, error } = useRegistrations();
   const individual = registrations.filter((r) => r.type === "individual").length;
   const stats = [
     ["Total registrations", registrations.length],
+    ["Payments to verify", registrations.filter((r) => r.paymentStatus === "Submitted").length],
+    ["Payments approved", registrations.filter((r) => r.paymentStatus === "Approved").length],
     ["Individual registrations", individual],
     ["Group registrations", registrations.length - individual],
     ["Total participants", registrations.reduce((sum, r) => sum + r.members.length, 0)],
@@ -19,7 +23,7 @@ export function Dashboard() {
   return (
     <>
       <Title text="Overview of your competition">Dashboard</Title>
-      <dl className="grid grid-cols-2 gap-4 md:grid-cols-3">
+      <dl className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {stats.map(([label, value]) => (
           <div key={label} className="card border-l-4 border-l-brand p-5">
             <dt className="text-sm text-zinc-600">{label}</dt>
@@ -31,10 +35,8 @@ export function Dashboard() {
         <h2 className="font-semibold">Recent registrations</h2>
         <Link href="/admin/registrations" className="text-sm font-semibold text-accent">View all →</Link>
       </div>
-      <div className="mt-3"><RegistrationTable items={registrations.slice(0, 5)} /></div>
-      <button type="button" className="btn-outline mt-10" onClick={() => {
-        if (window.confirm("Delete all registrations and changes made in this browser, and restore sample data?")) resetData();
-      }}>Reset prototype data</button>
+      {error && <p role="alert" className="mt-2 text-sm text-accent">{error}</p>}
+      <div className="mt-3">{loaded ? <RegistrationTable items={registrations.slice(0, 5)} /> : <p className="text-zinc-500">Loading registrations…</p>}</div>
     </>
   );
 }

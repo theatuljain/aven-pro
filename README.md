@@ -11,27 +11,24 @@ npm run dev
 
 Open http://localhost:3000. Admin panel: http://localhost:3000/admin
 
-## Prototype limitations
+## Settings
 
-- No backend: data is stored in the browser (localStorage and IndexedDB).
-- No admin login.
-- Razorpay works in test mode only; UPI QR is a placeholder. No real payment is processed.
-- Competition fees, rules, team and contact details are sample data.
+Create `.env.local` in the project root (never commit it). Add the same values in the hosting dashboard.
+
+```
+MONGODB_URI=mongodb+srv://USER:PASSWORD@HOST/avenpro
+ADMIN_PASSWORD=a-long-password-for-the-admin-panel
+```
+
+## Current limitations
+
+- Photos and videos are stored only in the admin's browser.
+- Payments are by UPI and are checked manually: the admin matches each UTR number and amount with the bank before approving.
+- Set the receiving UPI ID in Admin > Website Content.
+- Competition fees, rules, team and contact details start as sample data.
 
 ## Structure
 
 - `src/lib` - types, sample data and the data store
 - `src/components` - public website, registration and admin components
 - `src/app` - routes
-
-## Razorpay test payments
-
-Create a file named `.env.local` in the project root (it is not committed):
-
-```
-RAZORPAY_KEY_ID=rzp_test_xxxxxxxx
-RAZORPAY_KEY_SECRET=xxxxxxxx
-```
-
-Get the keys from the Razorpay Dashboard in Test Mode, then restart `npm run dev`.
-Only test keys are accepted.

@@ -3,17 +3,15 @@
 import { useT } from "@/lib/i18n";
 import { useState } from "react";
 import { AGE_CATEGORIES } from "@/lib/seed";
-import { updateData } from "@/lib/store";
-import type { Competition, Registration, RegistrationType, TeamMember } from "@/lib/types";
+import { api, loadSite } from "@/lib/store";
+import type { Competition, PublicRegistration, RegistrationInput, RegistrationType, TeamMember } from "@/lib/types";
 import { isEmail, isPhone, money } from "@/lib/utils";
 import { Field } from "../Field";
 import { AgeSelect } from "./AgeSelect";
 
 const EMPTY = { teamName: "", participantName: "", phone: "", email: "", city: "", ageCategory: "", age: "", guardianName: "", guardianPhone: "" };
 
-const newReference = () => `REG-${Date.now().toString(36).toUpperCase()}`;
-
-export function RegistrationForm({ type, competition: c, onDone }: { type: RegistrationType; competition: Competition; onDone: (r: Registration) => void }) {
+export function RegistrationForm({ type, competition: c, onDone }: { type: RegistrationType; competition: Competition; onDone: (r: PublicRegistration, phone: string) => void }) {
   const t = useT();
   const isGroup = type === "group";
   const [form, setForm] = useState(EMPTY);
@@ -21,6 +19,7 @@ export function RegistrationForm({ type, competition: c, onDone }: { type: Regis
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
 
   // Keep the count inside the limits even if the admin changes them.
   const size = Math.min(Math.max(count, c.minMembers), c.maxMembers);
@@ -28,7 +27,7 @@ export function RegistrationForm({ type, competition: c, onDone }: { type: Regis
   const ages = AGE_CATEGORIES.filter((a) => c.ageCategories.includes(a.id));
   const age = ages.find((a) => a.id === form.ageCategory);
   const isMinor = age ? age.max < 18 : false;
-  const member = (i: number): TeamMember => members[i] ?? { name: "", age: "" };
+  const member = (i: number): TeamMember => members[i] ?? { name: "", age: "", phone: "" };
 
   const bind = (name: keyof typeof EMPTY) => ({
     className: "input",
@@ -55,7 +54,7 @@ export function RegistrationForm({ type, competition: c, onDone }: { type: Regis
     setMembers(members.map((m) => ({ ...m, age: keep(m.age) })));
   }
 
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
     const e: Record<string, string> = {};
     if (isGroup && !form.teamName.trim()) e.teamName = t("Enter the team name.");
@@ -68,6 +67,7 @@ export function RegistrationForm({ type, competition: c, onDone }: { type: Regis
       for (let i = 0; i < size; i++) {
         if (!member(i).name.trim()) e[`member${i}`] = t("Enter the member's name.");
         else if (age && !ageOk(member(i).age)) e[`member${i}`] = t("Age must be between {min} and {max}.", { min: age.min, max: age.max });
+        else if (!isPhone(member(i).phone)) e[`member${i}`] = t("Enter a valid 10-digit mobile number.");
       }
     }
     if (isMinor) {
@@ -78,30 +78,30 @@ export function RegistrationForm({ type, competition: c, onDone }: { type: Regis
     setErrors(e);
     if (!age || Object.keys(e).length) return;
 
-    const registration: Registration = {
-      id: newReference(),
+    const input: RegistrationInput = {
       type,
       competitionSlug: c.slug,
-      competitionName: c.name,
-      participantName: form.participantName.trim(),
-      phone: form.phone.trim(),
-      email: form.email.trim(),
-      city: form.city.trim(),
-      teamName: isGroup ? form.teamName.trim() : "",
-      members: isGroup ? Array.from({ length: size }, (_, i) => member(i)) : [{ name: form.participantName.trim(), age: form.age }],
-      ageCategory: age.label,
-      guardianName: isMinor ? form.guardianName.trim() : "",
-      guardianPhone: isMinor ? form.guardianPhone.trim() : "",
-      amount,
-      paymentStatus: "Pending",
-      createdAt: new Date().toISOString(),
+      participantName: form.participantName,
+      phone: form.phone,
+      email: form.email,
+      city: form.city,
+      teamName: form.teamName,
+      members: isGroup ? Array.from({ length: size }, (_, i) => member(i)) : [{ name: form.participantName, age: form.age, phone: form.phone }],
+      ageCategory: age.id,
+      guardianName: form.guardianName,
+      guardianPhone: form.guardianPhone,
+      consent,
     };
-    if (!updateData((d) => ({ ...d, registrations: [registration, ...d.registrations] }))) {
-      setErrors({ form: t("Could not save. Browser storage may be full or blocked.") });
-      return;
+    setBusy(true);
+    try {
+      onDone(await api<PublicRegistration>("/api/registrations", "POST", input), input.phone.trim());
+      window.scrollTo({ top: 0 });
+    } catch (error) {
+      setErrors({ form: t((error as Error).message) });
+      // The price or team limits may have changed since the page opened.
+      void loadSite();
     }
-    onDone(registration);
-    window.scrollTo({ top: 0 });
+    setBusy(false);
   }
 
   return (
@@ -145,10 +145,11 @@ export function RegistrationForm({ type, competition: c, onDone }: { type: Regis
             <legend className="mb-1 text-sm font-medium">{t("Team member details *")}</legend>
             {Array.from({ length: size }, (_, i) => (
               <div key={i}>
-                <div className="grid grid-cols-[1.5rem_1fr_8rem] items-center gap-2">
+                <div className="grid grid-cols-[1.5rem_1fr_7.5rem] items-center gap-2 sm:grid-cols-[1.5rem_1fr_8rem_11rem]">
                   <span className="text-sm text-zinc-500">{i + 1}.</span>
                   <input className="input" aria-label={t("Member {number} name", { number: i + 1 })} placeholder={t("Full name")} value={member(i).name} onChange={(e) => setMember(i, { name: e.target.value })} />
                   <AgeSelect range={age} label={t("Member {number} age", { number: i + 1 })} value={member(i).age} onChange={(value) => setMember(i, { age: value })} />
+                  <input className="input col-start-2 col-end-4 sm:col-auto" type="tel" inputMode="numeric" maxLength={10} aria-label={t("Member {number} mobile", { number: i + 1 })} placeholder={t(isMinor ? "Own or parent's mobile" : "Mobile number")} value={member(i).phone} onChange={(e) => setMember(i, { phone: e.target.value.replace(/\D/g, "") })} />
                 </div>
                 {errors[`member${i}`] && <p role="alert" className="ml-10 mt-1 text-xs font-medium text-accent">{errors[`member${i}`]}</p>}
               </div>
@@ -184,7 +185,7 @@ export function RegistrationForm({ type, competition: c, onDone }: { type: Regis
       </dl>
 
       {Object.keys(errors).length > 0 && <p role="alert" className="text-sm font-medium text-accent">{errors.form ?? t("Please correct the highlighted fields.")}</p>}
-      <button type="submit" className="btn-primary w-full">{t("Submit and continue to payment")}</button>
+      <button type="submit" disabled={busy} className="btn-primary w-full">{t(busy ? "Please wait…" : "Submit and continue to payment")}</button>
     </form>
   );
 }

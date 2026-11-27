@@ -26,6 +26,7 @@ export function Footer() {
             <li><Link href="/activities" className="hover:text-gold">{t("Activities")}</Link></li>
             <li><Link href="/talent" className="hover:text-gold">{t("Talent")}</Link></li>
             <li><Link href="/#gallery" className="hover:text-gold">{t("Gallery")}</Link></li>
+            <li><Link href="/status" className="hover:text-gold">{t("Check Status")}</Link></li>
             <li><Link href="/#faq" className="hover:text-gold">{t("Frequently asked questions")}</Link></li>
           </ul>
         </div>

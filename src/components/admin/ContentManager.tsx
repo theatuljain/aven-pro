@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useData } from "@/lib/store";
 import type { Faq, SiteContent, TeamPerson } from "@/lib/types";
+import { isUpiId } from "@/lib/upi";
 import { Field } from "../Field";
 import { ImagePicker, Title, VideoPicker, useSave } from "./common";
 
@@ -13,13 +14,14 @@ export function ContentManager() {
   const [draft, setDraft] = useState<SiteContent | null>(null);
   const content = draft ?? saved;
   const { save, status, clear } = useSave();
+  const [upiError, setUpiError] = useState("");
   const change = (next: Partial<SiteContent>) => { setDraft({ ...content, ...next }); clear(); };
   const patch = (key: Section, value: object) => change({ [key]: { ...content[key], ...value } });
   const person = (id: string, value: Partial<TeamPerson>) => change({ team: content.team.map((p) => (p.id === id ? { ...p, ...value } : p)) });
 
   const question = (id: string, value: Partial<Faq>) => change({ faq: content.faq.map((f) => (f.id === id ? { ...f, ...value } : f)) });
 
-  const input = (section: Exclude<Section, "payment">, key: string, label: string, long = false) => {
+  const input = (section: Section, key: string, label: string, long = false) => {
     const props = {
       className: "input",
       value: (content[section] as Record<string, string>)[key],
@@ -106,14 +108,19 @@ export function ContentManager() {
           {input("social", "youtube", "YouTube")}
         </section>
         <section className={box}>
-          <h2 className={heading}>Payment options</h2>
-          <label className="flex gap-2 text-sm"><input type="checkbox" checked={content.payment.upiEnabled} onChange={(e) => patch("payment", { upiEnabled: e.target.checked })} />Show UPI QR option</label>
-          <label className="flex gap-2 text-sm"><input type="checkbox" checked={content.payment.razorpayEnabled} onChange={(e) => patch("payment", { razorpayEnabled: e.target.checked })} />Show Razorpay option</label>
-          <ImagePicker label="UPI QR code image" value={content.payment.qrImage} onChange={(qrImage) => patch("payment", { qrImage })} />
+          <h2 className={heading}>UPI payment</h2>
+          <p className="text-sm text-zinc-600">Money from registrations goes to this UPI ID. Check it carefully before saving.</p>
+          {input("payment", "upiId", "UPI ID, for example name@bank")}
+          {input("payment", "payeeName", "Name shown to the payer")}
         </section>
         <div className="sticky bottom-0 flex items-center gap-4 border-t border-zinc-200 bg-zinc-50 py-4">
-          <button type="button" className="btn-primary" onClick={() => { if (save((d) => ({ ...d, content }))) setDraft(null); }}>Save changes</button>
-          {status}
+          <button type="button" className="btn-primary" onClick={async () => {
+            const upiId = content.payment.upiId.trim();
+            if (upiId && !isUpiId(upiId)) return setUpiError("The UPI ID is not valid. It looks like name@bank.");
+            setUpiError("");
+            if (await save((d) => ({ ...d, content: { ...content, payment: { ...content.payment, upiId } } }))) setDraft(null);
+          }}>Save changes</button>
+          {upiError ? <span role="alert" className="text-sm font-medium text-accent">{upiError}</span> : status}
         </div>
       </div>
     </>

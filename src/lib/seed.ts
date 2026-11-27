@@ -75,7 +75,6 @@ export const seedData: SiteData = {
     talent("modelling", "Modelling", "🕴️"),
     talent("craft-and-activity", "Craft and Activity", "✂️"),
   ],
-  registrations: [],
   media: [],
   content: {
     announcement: { enabled: true, text: "Registrations are open. Choose your competition.", link: "/#categories" },
@@ -85,7 +84,7 @@ export const seedData: SiteData = {
       { id: "f2", question: "Can I register alone, or do I need a team?", answer: "Each competition page shows whether individual entry, group entry or both are allowed, along with the team size limit." },
       { id: "f3", question: "How is the group fee shared?", answer: "The group fee is for the whole team. The registration form shows each member's share." },
       { id: "f4", question: "Do children need permission?", answer: "Yes. Entries in the 10–17 category need a parent or guardian's name, mobile number and consent." },
-      { id: "f5", question: "How do I pay the fee?", answer: "Online payment is being tested. The organisers will share payment instructions." },
+      { id: "f5", question: "How do I pay the fee?", answer: "Pay by UPI after registering, then submit the 12-digit UTR number and a screenshot. The organisers verify every payment." },
     ],
     hero: {
       title: "Universal Sports & Talent Competition",
@@ -112,6 +111,6 @@ export const seedData: SiteData = {
       hours: "Timings to be added",
     },
     social: { instagram: "", facebook: "", youtube: "" },
-    payment: { upiEnabled: true, razorpayEnabled: true, qrImage: "" },
+    payment: { upiId: "", payeeName: "AvenPro" },
   },
 };

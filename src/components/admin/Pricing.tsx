@@ -20,13 +20,13 @@ function Row({ c }: { c: Competition }) {
   const shown = (k: Key) => draft[k] ?? String(c[k]);
   const [error, setError] = useState("");
   const { save, status, clear } = useSave();
-  function submit() {
+  async function submit() {
     const values = Object.fromEntries(COLUMNS.map(([k]) => [k, shown(k).trim() === "" ? NaN : Number(shown(k))])) as Record<Key, number>;
     if (!(values.individualFee >= 0 && values.groupFee >= 0)) return setError("Fees must be 0 or more.");
     const { minMembers: min, maxMembers: max } = values;
     if (!Number.isInteger(min) || !Number.isInteger(max) || min < 2 || max < min || max > 100) return setError("Check team size (2 to 100).");
     setError("");
-    const ok = save((d) => ({ ...d, competitions: d.competitions.map((x) => (x.slug === c.slug ? { ...x, ...values } : x)) }));
+    const ok = await save((d) => ({ ...d, competitions: d.competitions.map((x) => (x.slug === c.slug ? { ...x, ...values } : x)) }));
     if (ok) setDraft({});
   }
   return (
