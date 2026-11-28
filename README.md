@@ -26,6 +26,7 @@ ADMIN_PASSWORD=a-long-password-for-the-admin-panel
 - Payments are by UPI and are checked manually: the admin matches each UTR number and amount with the bank before approving.
 - Set the receiving UPI ID in Admin > Website Content.
 - Competition fees, rules, team and contact details start as sample data.
+- The 30-minute payment limit is only a warning. Nothing is deleted automatically; the admin deletes unpaid or rejected entries in Admin > Registrations.
 
 ## Structure
 

@@ -112,6 +112,12 @@ export function PaymentPanel({ registration, phone }: { registration: PublicRegi
       {canPay && !upiReady && <p className="card p-6 text-sm">{t("Online payment is not available yet.")}</p>}
       {canPay && upiReady && (
         <>
+          {r.paymentStatus === "Pending" && (
+            <p className="rounded-xl border border-gold bg-amber-50 p-4 text-sm font-medium">
+              ⏱ {t("Pay and upload the payment proof within 30 minutes. Otherwise you may have to fill the form again.")}{" "}
+              {t("If you have already paid, do not pay again. Upload the proof or contact the organisers.")}
+            </p>
+          )}
           <div className="card space-y-4 p-6 text-center">
             <h2 className="font-display text-2xl font-semibold text-brand">{t("Pay {amount} by UPI", { amount: money(r.amount) })}</h2>
             <QrCode value={link} />

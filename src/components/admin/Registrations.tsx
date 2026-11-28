@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { api } from "@/lib/store";
 import type { Registration } from "@/lib/types";
 import { money } from "@/lib/utils";
 import { Title } from "./common";
@@ -64,11 +65,29 @@ function Details({ r, onClose }: { r: Registration; onClose: () => void }) {
 }
 
 export function RegistrationTable({ items }: { items: Registration[] }) {
+  const { refresh } = useRegistrations();
   const [openId, setOpenId] = useState("");
+  const [deleting, setDeleting] = useState("");
+  const [error, setError] = useState("");
   const open = items.find((r) => r.id === openId);
+
+  async function remove(r: Registration) {
+    if (!window.confirm(`Delete ${r.id} (${r.teamName || r.participantName})? This cannot be undone. If money was paid for it, check your bank or UPI app first.`)) return;
+    setDeleting(r.id);
+    setError("");
+    try {
+      await api(`/api/admin/registrations/${encodeURIComponent(r.id)}`, "DELETE");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    refresh();
+    setDeleting("");
+  }
+
   if (!items.length) return <p className="card p-8 text-center text-zinc-500">No registrations found.</p>;
   return (
     <>
+      {error && <p role="alert" className="mb-3 text-sm font-medium text-accent">{error}</p>}
       {open && <Details r={open} onClose={() => setOpenId("")} />}
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[1050px] text-left text-sm">
@@ -88,7 +107,14 @@ export function RegistrationTable({ items }: { items: Registration[] }) {
                 <td className="p-3">{money(r.amount)}</td>
                 <td className="p-3 font-mono text-xs">{r.utr ?? "—"}</td>
                 <td className="p-3"><span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[r.paymentStatus]}`}>{STATUS[r.paymentStatus]}</span></td>
-                <td className="p-3"><button type="button" className="btn-green" onClick={() => { setOpenId(r.id); window.scrollTo({ top: 0 }); }}>View</button></td>
+                <td className="p-3">
+                  <div className="flex gap-2">
+                    <button type="button" className="btn-green" onClick={() => { setOpenId(r.id); window.scrollTo({ top: 0 }); }}>View</button>
+                    {(r.paymentStatus === "Pending" || r.paymentStatus === "Rejected") && (
+                      <button type="button" disabled={deleting === r.id} className="btn-outline" onClick={() => remove(r)}>Delete</button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
